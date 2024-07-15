@@ -203,4 +203,4 @@ while running:
     pygame.display.flip()  # Обновление экрана
     clock.tick(FPS)  # Ограничение частоты кадров
 
-pygame.quit()  # Завершение работы Pygame
+pygame.quit()  # Завершение работы Pygam
