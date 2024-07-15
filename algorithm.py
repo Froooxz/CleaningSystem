@@ -56,7 +56,7 @@ def auto_clean():
     global holding_space, start_press_time, last_remove_time, remaining_hold_time
 
     # Автоматическое движение вверх и вниз по экрану
-    for y in range(0, SCREEN_HEIGHT, BLUE_SIZE):
+    for y in range(0, SCREEN_HEIGHT-BLUE_SIZE-SENSOR_HEIGHT, BLUE_SIZE):
         target_y = y + BLUE_SIZE
         reached_target = False
         circle_count = 0
