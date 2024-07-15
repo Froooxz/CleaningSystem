@@ -48,47 +48,79 @@ start_press_time = 0  # Время начала удержания клавиш�
 auto_mode = False  # Флаг автоматического режима
 remaining_hold_time = 0  # Оставшееся время удержания клавиши "пробел"
 
-# Флаг направления
-direction = "down"
 
 
-def auto_clean():
+def auto_clean_down():
     global holding_space, start_press_time, last_remove_time, remaining_hold_time
-    for i in range(2):
 
-        # Автоматическое движение вверх и вниз по экрану
-        for y in range(0, SCREEN_HEIGHT-BLUE_SIZE-SENSOR_HEIGHT, BLUE_SIZE):
-            target_y = y + BLUE_SIZE
-            reached_target = False
-            circle_count = 0
+    # Автоматическое движение вверх и вниз по экрану
+    for y in range(0, SCREEN_HEIGHT-BLUE_SIZE-SENSOR_HEIGHT, BLUE_SIZE):
+        target_y = y + BLUE_SIZE
+        reached_target = False
+        circle_count = 0
 
-            while not reached_target:
-                if blue_rect.y < target_y:
-                    blue_rect.y += MOVE_SPEED
-                    if blue_rect.y >= target_y:
-                        blue_rect.y = target_y
-                        reached_target = True
-                elif blue_rect.y > target_y:
-                    target_y = y
-                    blue_rect.y -= MOVE_SPEED
-                    if blue_rect.y <= target_y:
-                        blue_rect.y = target_y
-                        reached_target = True
+        while not reached_target:
+            if blue_rect.y < target_y:
+                blue_rect.y += MOVE_SPEED
+                if blue_rect.y >= target_y:
+                    blue_rect.y = target_y
+                    reached_target = True
+            elif blue_rect.y > target_y:
+                target_y = y
+                blue_rect.y -= MOVE_SPEED
+                if blue_rect.y <= target_y:
+                    blue_rect.y = target_y
+                    reached_target = True
 
 
-                # Детектирование кругов в области сенсоров
-                top_sensor = pygame.Rect(blue_rect.left, blue_rect.top - SENSOR_HEIGHT, blue_rect.width, SENSOR_HEIGHT)
-                bottom_sensor = pygame.Rect(blue_rect.left, blue_rect.bottom, blue_rect.width, SENSOR_HEIGHT)
-                circle_count += sum(circle_inside_sensor(top_sensor, circle) for circle in circles)
-                circle_count += sum(circle_inside_sensor(bottom_sensor, circle) for circle in circles)
+            # Детектирование кругов в области сенсоров
+            top_sensor = pygame.Rect(blue_rect.left, blue_rect.top - SENSOR_HEIGHT, blue_rect.width, SENSOR_HEIGHT)
+            bottom_sensor = pygame.Rect(blue_rect.left, blue_rect.bottom, blue_rect.width, SENSOR_HEIGHT)
+            circle_count += sum(circle_inside_sensor(top_sensor, circle) for circle in circles)
+            circle_count += sum(circle_inside_sensor(bottom_sensor, circle) for circle in circles)
 
-                draw_game_screen()  # Отрисовка игрового экрана
-                pygame.display.flip()  # Обновление экрана
-                clock.tick(FPS)  # Ограничение частоты кадров
+            draw_game_screen()  # Отрисовка игрового экрана
+            pygame.display.flip()  # Обновление экрана
+            clock.tick(FPS)  # Ограничение частоты кадров
 
-            hold_and_clean(circle_count)  # Удержание и очистка
 
-    i += 1
+
+        hold_and_clean(circle_count)  # Удержание и очистка
+
+def auto_clean_up():
+    global holding_space, start_press_time, last_remove_time, remaining_hold_time
+
+    # Автоматическое движение вверх и вниз по экрану, начиная снизу
+    for y in range(SCREEN_HEIGHT - BLUE_SIZE - SENSOR_HEIGHT, -BLUE_SIZE, -BLUE_SIZE):
+        target_y = y
+        reached_target = False
+        circle_count = 0
+
+        while not reached_target:
+            if blue_rect.y > target_y:
+                blue_rect.y -= MOVE_SPEED
+                if blue_rect.y <= target_y:
+                    blue_rect.y = target_y
+                    reached_target = True
+            elif blue_rect.y < target_y:
+                target_y = y + BLUE_SIZE
+                blue_rect.y += MOVE_SPEED
+                if blue_rect.y >= target_y:
+                    blue_rect.y = target_y
+                    reached_target = True
+
+            # Детектирование кругов в области сенсоров
+            top_sensor = pygame.Rect(blue_rect.left, blue_rect.top - SENSOR_HEIGHT, blue_rect.width, SENSOR_HEIGHT)
+            bottom_sensor = pygame.Rect(blue_rect.left, blue_rect.bottom, blue_rect.width, SENSOR_HEIGHT)
+            circle_count += sum(circle_inside_sensor(top_sensor, circle) for circle in circles)
+            circle_count += sum(circle_inside_sensor(bottom_sensor, circle) for circle in circles)
+
+            draw_game_screen()  # Отрисовка игрового экрана
+            pygame.display.flip()  # Обновление экрана
+            clock.tick(FPS)  # Ограничение частоты кадров
+
+        hold_and_clean(circle_count)  # Удержание и очистка
+
 
 def hold_and_clean(circle_count):
     global holding_space, start_press_time, last_remove_time, remaining_hold_time
@@ -181,7 +213,8 @@ while running:
             if BUTTON_X <= mouse_x <= BUTTON_X + BUTTON_WIDTH and BUTTON_Y <= mouse_y <= BUTTON_Y + BUTTON_HEIGHT:
                 auto_mode = not auto_mode  # Включение/выключение автоматического режима при нажатии на кнопку "Auto Mode"
                 if auto_mode:
-                    auto_clean()  # Запуск функции автоматической очистки
+                    auto_clean_down()  # Запуск функции автоматической очистки
+                    auto_clean_up()
 
     if moving_up and blue_rect.top > 0:
         blue_rect.y -= MOVE_SPEED  # Движение синего квадрата вверх, если флаг движения вверх включен
