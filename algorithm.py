@@ -10,7 +10,7 @@ SCREEN_HEIGHT = 500  # Высота экрана
 BLUE_SIZE = 50  # Размер синего квадрата
 CIRCLE_RADIUS = 5  # Радиус красных кругов
 FPS = 60  # Частота кадров в секунду
-REMOVE_DELAY = 500  # Задержка перед удалением кругов (в миллисекундах)
+REMOVE_DELAY = 100  # Задержка перед удалением кругов (в миллисекундах)
 BUTTON_WIDTH = 150  # Ширина кнопки "Auto Mode"
 BUTTON_HEIGHT = 50  # Высота кнопки "Auto Mode"
 BUTTON_X = SCREEN_WIDTH + 10  # Положение кнопки "Auto Mode" по X
@@ -54,43 +54,46 @@ direction = "down"
 
 def auto_clean():
     global holding_space, start_press_time, last_remove_time, remaining_hold_time
+    for i in range(2):
 
-    # Автоматическое движение вверх и вниз по экрану
-    for y in range(0, SCREEN_HEIGHT-BLUE_SIZE-SENSOR_HEIGHT, BLUE_SIZE):
-        target_y = y + BLUE_SIZE
-        reached_target = False
-        circle_count = 0
+        # Автоматическое движение вверх и вниз по экрану
+        for y in range(0, SCREEN_HEIGHT-BLUE_SIZE-SENSOR_HEIGHT, BLUE_SIZE):
+            target_y = y + BLUE_SIZE
+            reached_target = False
+            circle_count = 0
 
-        while not reached_target:
-            if blue_rect.y < target_y:
-                blue_rect.y += MOVE_SPEED
-                if blue_rect.y >= target_y:
-                    blue_rect.y = target_y
-                    reached_target = True
-            elif blue_rect.y > target_y:
-                target_y = y
-                blue_rect.y -= MOVE_SPEED
-                if blue_rect.y <= target_y:
-                    blue_rect.y = target_y
-                    reached_target = True
+            while not reached_target:
+                if blue_rect.y < target_y:
+                    blue_rect.y += MOVE_SPEED
+                    if blue_rect.y >= target_y:
+                        blue_rect.y = target_y
+                        reached_target = True
+                elif blue_rect.y > target_y:
+                    target_y = y
+                    blue_rect.y -= MOVE_SPEED
+                    if blue_rect.y <= target_y:
+                        blue_rect.y = target_y
+                        reached_target = True
 
-            # Детектирование кругов в области сенсоров
-            top_sensor = pygame.Rect(blue_rect.left, blue_rect.top - SENSOR_HEIGHT, blue_rect.width, SENSOR_HEIGHT)
-            bottom_sensor = pygame.Rect(blue_rect.left, blue_rect.bottom, blue_rect.width, SENSOR_HEIGHT)
-            circle_count += sum(circle_inside_sensor(top_sensor, circle) for circle in circles)
-            circle_count += sum(circle_inside_sensor(bottom_sensor, circle) for circle in circles)
 
-            draw_game_screen()  # Отрисовка игрового экрана
-            pygame.display.flip()  # Обновление экрана
-            clock.tick(FPS)  # Ограничение частоты кадров
+                # Детектирование кругов в области сенсоров
+                top_sensor = pygame.Rect(blue_rect.left, blue_rect.top - SENSOR_HEIGHT, blue_rect.width, SENSOR_HEIGHT)
+                bottom_sensor = pygame.Rect(blue_rect.left, blue_rect.bottom, blue_rect.width, SENSOR_HEIGHT)
+                circle_count += sum(circle_inside_sensor(top_sensor, circle) for circle in circles)
+                circle_count += sum(circle_inside_sensor(bottom_sensor, circle) for circle in circles)
 
-        hold_and_clean(circle_count)  # Удержание и очистка
+                draw_game_screen()  # Отрисовка игрового экрана
+                pygame.display.flip()  # Обновление экрана
+                clock.tick(FPS)  # Ограничение частоты кадров
 
+            hold_and_clean(circle_count)  # Удержание и очистка
+
+    i += 1
 
 def hold_and_clean(circle_count):
     global holding_space, start_press_time, last_remove_time, remaining_hold_time
     if circle_count > 0:
-        hold_time = circle_count * 1  # Время удержания, зависящее от количества кругов (1 секунда на круг)
+        hold_time = circle_count * REMOVE_DELAY/1000  # Время удержания, зависящее от количества кругов (1 секунда на круг)
         remaining_hold_time = hold_time
         start_press_time = pygame.time.get_ticks()
         last_remove_time = start_press_time
@@ -135,10 +138,10 @@ def draw_game_screen():
     pygame.draw.rect(screen, GRAY, top_sensor)
     pygame.draw.rect(screen, GRAY, bottom_sensor)
 
-    # Отображение таймера удержания "пробел"
-    if holding_space and remaining_hold_time > 0:
-        timer_text = font.render(f"{remaining_hold_time:.1f}s", True, BLACK)
-        screen.blit(timer_text, (blue_rect.right + 5, blue_rect.centery - timer_text.get_height() // 2))
+    # # Отображение таймера удержания "пробел"
+    # if holding_space and remaining_hold_time > 0:
+    #     timer_text = font.render(f"{remaining_hold_time:.1f}s", True, BLACK)
+    #     screen.blit(timer_text, (blue_rect.right + 5, blue_rect.centery - timer_text.get_height() // 2))
 
     # Отрисовка кнопки "Auto Mode"
     pygame.draw.rect(screen, GRAY, (BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT))
