@@ -53,7 +53,20 @@ def auto_clean():
     global holding_space, start_press_time, last_remove_time, remaining_hold_time
 
     for y in range(0, SCREEN_HEIGHT, BLUE_SIZE):
-        blue_rect.y = y
+        target_y = y
+        while blue_rect.y != target_y:
+            if blue_rect.y < target_y:
+                blue_rect.y += MOVE_SPEED
+                if blue_rect.y > target_y:
+                    blue_rect.y = target_y
+            else:
+                blue_rect.y -= MOVE_SPEED
+                if blue_rect.y < target_y:
+                    blue_rect.y = target_y
+            draw_game_screen()
+            pygame.display.flip()
+            clock.tick(FPS)
+
         if any(circle_inside_blue_rect(circle) for circle in circles):
             hold_time = random.uniform(1, 3)  # Случайное время удержания пробела
             remaining_hold_time = hold_time
