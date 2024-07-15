@@ -1,113 +1,198 @@
-import pygame
-import random
+import pygame  # Импортируем библиотеку Pygame для создания игр и работы с графикой
+import random  # Импортируем библиотеку random для генерации случайных чисел
 
 # Инициализация Pygame
-pygame.init()
+pygame.init()  # Инициализация всех модулей Pygame
 
 # Константы
-SECTOR_SIZE = 80  # Размер одного квадрата-сектора
-SECTOR_COUNT = 10  # Количество обычных секторов
-TOTAL_SECTORS = SECTOR_COUNT + 1  # Общее количество секторов, включая зеленый
-SCREEN_WIDTH = SECTOR_SIZE  # Ширина экрана равна ширине одного сектора
-SCREEN_HEIGHT = SECTOR_SIZE * TOTAL_SECTORS  # Высота экрана равна высоте всех секторов
-MINI_MAP_SCALE = 0.4  # Масштаб миникарты
-MINI_MAP_WIDTH = int(SCREEN_WIDTH * MINI_MAP_SCALE)  # Ширина миникарты
-MINI_MAP_HEIGHT = int(SCREEN_HEIGHT * MINI_MAP_SCALE)  # Высота миникарты
-CIRCLE_RADIUS = 10  # Радиус красного круга
-BLUE_SIZE = SECTOR_SIZE - 10  # Размер синего квадрата чуть меньше сектора
-FPS = 60  # Частота обновления экрана
-REMOVE_DELAY = 250  # Задержка удаления красных кругов в миллисекундах
+SCREEN_WIDTH = 50  # Ширина игрового поля
+SCREEN_HEIGHT = 600  # Высота игрового поля
+BLUE_SIZE = 50  # Размер синего квадрата
+CIRCLE_RADIUS = 5  # Радиус красного круга
+FPS = 60  # Частота обновления экрана (кадров в секунду)
+REMOVE_DELAY = 500  # Задержка удаления красных кругов в миллисекундах
+BUTTON_WIDTH = 150  # Ширина кнопки
+BUTTON_HEIGHT = 50  # Высота кнопки
+BUTTON_X = SCREEN_WIDTH + 10  # Положение кнопки по оси x
+BUTTON_Y = SCREEN_HEIGHT - BUTTON_HEIGHT - 10  # Положение кнопки по оси y
+MOVE_SPEED = 3  # Скорость перемещения синего квадрата
+SENSOR_HEIGHT = 5  # Высота сенсоров
 
 # Цвета
-BLACK = (0, 0, 0)  # Черный
-WHITE = (255, 255, 255)  # Белый
-RED = (255, 0, 0)  # Красный
-BLUE = (0, 0, 255)  # Синий
-GREEN = (0, 255, 0)  # Зеленый
+BLACK = (0, 0, 0)  # Черный цвет
+WHITE = (255, 255, 255)  # Белый цвет
+RED = (255, 0, 0)  # Красный цвет
+BLUE = (0, 0, 255)  # Синий цвет
+GRAY = (200, 200, 200)  # Серый цвет
 
 # Настройки экрана
-WINDOW_WIDTH = SCREEN_WIDTH + MINI_MAP_WIDTH + 20  # Дополнительное пространство для миникарты
-screen = pygame.display.set_mode((WINDOW_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Mini Game")
+WINDOW_WIDTH = SCREEN_WIDTH + BUTTON_WIDTH + 30  # Ширина окна с дополнительным пространством для кнопки
+screen = pygame.display.set_mode((WINDOW_WIDTH, SCREEN_HEIGHT))  # Создаем окно игры с заданными размерами
+pygame.display.set_caption("Cleaning System Model")  # Устанавливаем заголовок окна
 
-# Шрифт для отображения времени нажатия пробела
-font = pygame.font.Font(None, 24)
+# Шрифт для отображения текста
+font = pygame.font.Font(None, 24)  # Создаем объект шрифта с размером 24
 
-# Создание секторов с красными кругами
-sectors = []
-time_pressed = [0] * TOTAL_SECTORS  # Время нажатия пробела для каждого сектора
-for i in range(SECTOR_COUNT):
-    num_circles = random.randint(1, 5)  # Случайное количество кругов в секторе
-    circles = []
-    for _ in range(num_circles):
-        x = random.randint(CIRCLE_RADIUS, SECTOR_SIZE - CIRCLE_RADIUS)  # Случайная позиция круга по оси x
-        y = (i + 1) * SECTOR_SIZE + random.randint(CIRCLE_RADIUS, SECTOR_SIZE - CIRCLE_RADIUS)  # Случайная позиция круга по оси y
-        circles.append((x, y))  # Добавление круга в список
-    sectors.append(circles)  # Добавление сектора в список
+# Создание красных кругов
+circles = []  # Список для хранения кругов
+for _ in range(50):  # Количество красных кругов
+    x = random.randint(CIRCLE_RADIUS, SCREEN_WIDTH - CIRCLE_RADIUS)  # Случайная позиция круга по оси x
+    y = random.randint(CIRCLE_RADIUS, SCREEN_HEIGHT - CIRCLE_RADIUS)  # Случайная позиция круга по оси y
+    circles.append((x, y))  # Добавление круга в список
 
-# Синий квадрат в центре зеленого сектора
-blue_rect = pygame.Rect((SECTOR_SIZE - BLUE_SIZE) // 2, (SECTOR_SIZE - BLUE_SIZE) // 2, BLUE_SIZE, BLUE_SIZE)
-current_sector = 0  # Изначально синий квадрат находится в зеленом секторе
+# Синий квадрат в начальной позиции
+blue_rect = pygame.Rect((SCREEN_WIDTH - BLUE_SIZE) // 2, 0, BLUE_SIZE, BLUE_SIZE)  # Создание синего квадрата
 holding_space = False  # Флаг удержания пробела
 last_remove_time = 0  # Время последнего удаления круга
 start_press_time = 0  # Время начала нажатия пробела
+auto_mode = False  # Флаг автоматического режима
+remaining_hold_time = 0  # Оставшееся время удержания
+
+# Флаг направления движения
+direction = "down"
+
+def auto_clean():
+    """Функция для автоматического режима"""
+    global holding_space, start_press_time, last_remove_time, remaining_hold_time, direction
+
+    while True:
+        if direction == "down":
+            target_y = blue_rect.bottom + MOVE_SPEED
+            if target_y > SCREEN_HEIGHT:
+                direction = "up"
+            else:
+                blue_rect.y += MOVE_SPEED
+        elif direction == "up":
+            target_y = blue_rect.top - MOVE_SPEED
+            if target_y < 0:
+                direction = "down"
+            else:
+                blue_rect.y -= MOVE_SPEED
+
+        draw_game_screen()  # Рисуем элементы игры
+        pygame.display.flip()  # Обновляем экран
+        clock.tick(FPS)  # Ограничиваем частоту кадров
+
+        if [circle_inside_sensor(blue_rect, circle) for circle in circles]:
+            hold_time = random.uniform(1, 3)  # Случайное время удержания пробела
+            remaining_hold_time = hold_time
+            start_press_time = pygame.time.get_ticks()  # Время начала удержания
+            last_remove_time = start_press_time
+            holding_space = True
+
+            while any(circle_inside_sensor(blue_rect, circle) for circle in circles) and remaining_hold_time > 0:
+                current_time = pygame.time.get_ticks()
+                if current_time - last_remove_time >= REMOVE_DELAY:
+                    last_remove_time = current_time
+                    circles[:] = [circle for circle in circles if not circle_inside_sensor(blue_rect, circle)]
+                elapsed_time = (current_time - start_press_time) / 1000
+                remaining_hold_time -= elapsed_time
+                start_press_time = current_time
+                draw_game_screen()  # Рисуем элементы игры
+                pygame.display.flip()  # Обновляем экран
+                clock.tick(FPS)  # Ограничиваем частоту кадров
+
+            holding_space = False
+
+        if not auto_mode:
+            break
+
+def circle_inside_blue_rect(circle):
+    """Проверка, находится ли круг внутри синего квадрата"""
+    x, y = circle
+    return blue_rect.left <= x <= blue_rect.right and blue_rect.top <= y <= blue_rect.bottom
+
+def circle_inside_sensor(sensor_rect, circle):
+    """Проверка, находится ли круг внутри сенсора"""
+    x, y = circle
+    return sensor_rect.left <= x <= sensor_rect.right and sensor_rect.top <= y <= sensor_rect.bottom
+
+def draw_game_screen():
+    """Функция для рисования всех элементов на экране"""
+    # Очистка экрана
+    screen.fill(WHITE)  # Заполнение экрана белым цветом
+
+    # Рисование красных кругов
+    for circle in circles:
+        pygame.draw.circle(screen, RED, circle, CIRCLE_RADIUS)  # Рисуем красные круги
+
+    # Рисование синего квадрата
+    pygame.draw.rect(screen, BLUE, blue_rect)  # Рисуем синий квадрат
+
+    # Рисование сенсоров
+    top_sensor = pygame.Rect(blue_rect.left, blue_rect.top - SENSOR_HEIGHT, blue_rect.width, SENSOR_HEIGHT)
+    bottom_sensor = pygame.Rect(blue_rect.left, blue_rect.bottom, blue_rect.width, SENSOR_HEIGHT)
+    pygame.draw.rect(screen, GRAY, top_sensor)  # Рисуем верхний сенсор
+    pygame.draw.rect(screen, GRAY, bottom_sensor)  # Рисуем нижний сенсор
+
+    # Отображение таймера, если удерживается пробел
+    if holding_space and remaining_hold_time > 0:
+        timer_text = font.render(f"{remaining_hold_time:.1f}s", True, BLACK)  # Отображение оставшегося времени
+        screen.blit(timer_text, (blue_rect.right + 5, blue_rect.centery - timer_text.get_height() // 2))  # Отображение текста на экране
+
+    # Рисование кнопки
+    pygame.draw.rect(screen, GRAY, (BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT))  # Рисуем кнопку
+    button_text = font.render("Auto Mode", True, BLACK)  # Текст кнопки
+    button_rect = button_text.get_rect(center=(BUTTON_X + BUTTON_WIDTH // 2, BUTTON_Y + BUTTON_HEIGHT // 2))  # Центрирование текста кнопки
+    screen.blit(button_text, button_rect)  # Отображение текста кнопки
 
 # Основной игровой цикл
-running = True
-clock = pygame.time.Clock()
+running = True  # Флаг для работы основного цикла игры
+clock = pygame.time.Clock()  # Создание объекта для отслеживания времени
+
+moving_up = False  # Флаг перемещения вверх
+moving_down = False  # Флаг перемещения вниз
 
 while running:
     current_time = pygame.time.get_ticks()  # Текущее время в миллисекундах
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:  # Проверка на закрытие окна
-            running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP and current_sector > 0:  # Перемещение вверх
-                current_sector -= 1
-                blue_rect.y = current_sector * SECTOR_SIZE + (SECTOR_SIZE - BLUE_SIZE) // 2
-            elif event.key == pygame.K_DOWN and current_sector < SECTOR_COUNT:  # Перемещение вниз
-                current_sector += 1
-                blue_rect.y = current_sector * SECTOR_SIZE + (SECTOR_SIZE - BLUE_SIZE) // 2
+            running = False  # Завершение основного цикла
+        elif event.type == pygame.KEYDOWN and not auto_mode:
+            if event.key == pygame.K_UP:  # Начало перемещения вверх
+                moving_up = True
+            elif event.key == pygame.K_DOWN:  # Начало перемещения вниз
+                moving_down = True
             elif event.key == pygame.K_SPACE:  # Удержание пробела
                 holding_space = True
-                start_press_time = current_time
-                last_remove_time = current_time
         elif event.type == pygame.KEYUP:
-            if event.key == pygame.K_SPACE:  # Отпускание пробела
+            if event.key == pygame.K_UP:  # Остановка перемещения вверх
+                moving_up = False
+            elif event.key == pygame.K_DOWN:  # Остановка перемещения вниз
+                moving_down = False
+            elif event.key == pygame.K_SPACE:  # Отпускание пробела
                 holding_space = False
-                if current_sector > 0:
-                    time_pressed[current_sector] += (current_time - start_press_time) / 1000  # Обновление времени нажатия
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_x, mouse_y = event.pos  # Позиция мыши
+            if BUTTON_X <= mouse_x <= BUTTON_X + BUTTON_WIDTH and BUTTON_Y <= mouse_y <= BUTTON_Y + BUTTON_HEIGHT:
+                auto_mode = not auto_mode  # Переключение режима
+                if auto_mode:
+                    auto_clean()  # Запуск автоматического режима
+
+    # Плавное перемещение синего квадрата
+    if moving_up and blue_rect.top > 0:
+        blue_rect.y -= MOVE_SPEED  # Перемещение вверх
+    if moving_down and blue_rect.bottom < SCREEN_HEIGHT:
+        blue_rect.y += MOVE_SPEED  # Перемещение вниз
+
+    # Сенсоры
+    top_sensor = pygame.Rect(blue_rect.left, blue_rect.top - SENSOR_HEIGHT, blue_rect.width, SENSOR_HEIGHT)
+    bottom_sensor = pygame.Rect(blue_rect.left, blue_rect.bottom, blue_rect.width, SENSOR_HEIGHT)
 
     # Удаление красных кругов при удержании пробела
-    if holding_space and current_sector > 0:
+    if holding_space:
         if current_time - last_remove_time >= REMOVE_DELAY:  # Проверка задержки удаления
             last_remove_time = current_time
-            if sectors[current_sector - 1]:  # Удаление круга из текущего сектора
-                sectors[current_sector - 1].pop()
+            circles[:] = [circle for circle in circles if not circle_inside_blue_rect(circle)]  # Удаление кругов внутри синего квадрата
+        elapsed_time = (current_time - start_press_time) / 1000  # Вычисление прошедшего времени
+        remaining_hold_time -= elapsed_time  # Обновление оставшегося времени удержания
+        start_press_time = current_time
+        if remaining_hold_time <= 0:
+            holding_space = False  # Сброс флага удержания пробела
 
-    # Очистка экрана
-    screen.fill(WHITE)
-
-    # Рисование зеленого сектора
-    pygame.draw.rect(screen, GREEN, (0, 0, SECTOR_SIZE, SECTOR_SIZE))
-
-    # Рисование остальных секторов и красных кругов
-    for i, circles in enumerate(sectors):
-        pygame.draw.rect(screen, BLACK, (0, (i + 1) * SECTOR_SIZE, SECTOR_SIZE, SECTOR_SIZE), 1)
-        for circle in circles:
-            pygame.draw.circle(screen, RED, circle, CIRCLE_RADIUS)
-
-    # Рисование синего квадрата
-    pygame.draw.rect(screen, BLUE, blue_rect)
-
-    # Рисование миникарты
-    for i in range(TOTAL_SECTORS):
-        mini_rect = pygame.Rect(SCREEN_WIDTH + 10, i * MINI_MAP_SCALE * SECTOR_SIZE, MINI_MAP_WIDTH, MINI_MAP_SCALE * SECTOR_SIZE)
-        pygame.draw.rect(screen, GREEN if i == 0 else BLACK, mini_rect, 1)
-        time_text = font.render(f"{time_pressed[i]:.1f}s", True, BLACK)
-        text_rect = time_text.get_rect(center=(SCREEN_WIDTH + 10 + MINI_MAP_WIDTH // 2, i * MINI_MAP_SCALE * SECTOR_SIZE + MINI_MAP_SCALE * SECTOR_SIZE // 2))
-        screen.blit(time_text, text_rect)
+    # Очистка экрана и рисование всех элементов
+    draw_game_screen()
 
     # Обновление экрана
     pygame.display.flip()
