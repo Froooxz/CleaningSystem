@@ -210,4 +210,4 @@ while running:
     pygame.display.flip()
     clock.tick(FPS)  # Ограничение FPS
 
-pygame.quit()  # Завершение Pygam
+pygame.quit()  # Завершение Pygame
