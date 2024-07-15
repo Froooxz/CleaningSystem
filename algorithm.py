@@ -68,6 +68,7 @@ def auto_clean():
                     blue_rect.y = target_y
                     reached_target = True
             elif blue_rect.y > target_y:
+                target_y = y
                 blue_rect.y -= MOVE_SPEED
                 if blue_rect.y <= target_y:
                     blue_rect.y = target_y
