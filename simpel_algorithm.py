@@ -17,6 +17,7 @@ BUTTON_X = SCREEN_WIDTH + 10  # Положение кнопки "Auto Mode" по
 BUTTON_Y = SCREEN_HEIGHT - BUTTON_HEIGHT - 10  # Положение кнопки "Auto Mode" по Y
 MOVE_SPEED = 5  # Скорость перемещения синего квадрата
 DAMAGE_PER_TICK = 2  # Количество урона, наносимого за тик
+CHECK_TIME = 200  # Время проверки после автоматического режима (в миллисекундах)
 
 # Цвета
 BLACK = (0, 0, 0)  # Черный цвет
@@ -52,11 +53,18 @@ last_remove_time = pygame.time.get_ticks()  # Время последнего у
 input_active = False  # Флаг активности ввода текста
 input_box = pygame.Rect(BUTTON_X, BUTTON_Y - 60, BUTTON_WIDTH, 40)  # Прямоугольник для ввода текста
 input_text = '1'  # Текст по умолчанию для ввода
-auto_mode_cycles = int(input_text) * 2  # Количество циклов для автоматического режима
+auto_mode_cycles = int(input_text)  # Количество циклов для автоматического режима
+
 
 def auto_move(cycles):
     global blue_rect, MOVE_SPEED, auto_mode, last_remove_time
-    direction = 1  # Направление движения: 1 - вниз, -1 - вверх
+
+    start_time = pygame.time.get_ticks()  # Начало отсчета времени
+
+    if blue_rect.bottom >= SCREEN_HEIGHT:
+        direction = -1  # Направление движения: 1 - вниз, -1 - вверх
+    else:
+        direction = 1
     cycle_count = 0  # Счетчик циклов
 
     while auto_mode and cycle_count < cycles:
@@ -70,6 +78,11 @@ def auto_move(cycles):
         draw_game_screen()  # Отрисовка игрового экрана
         pygame.display.flip()  # Обновление экрана
         clock.tick(FPS)  # Ограничение частоты кадров
+
+    if blue_rect.bottom != SCREEN_HEIGHT:
+        auto_move(1)
+
+    check_position_after_auto(start_time)  # Передаем время начала
 
 def clean_circles():
     global circles, last_remove_time
@@ -85,6 +98,7 @@ def clean_circles():
                 circle[2] = health  # Обновление здоровья круга
 
     last_remove_time = current_time  # Обновление времени последнего удаления круга
+
 
 def draw_game_screen():
     screen.fill(WHITE)  # Заполнение экрана белым цветом
@@ -104,6 +118,29 @@ def draw_game_screen():
     screen.blit(input_text_surface, (input_box.x + 5, input_box.y + 5))  # Отображение текста в прямоугольнике ввода
     input_box.w = max(50, input_text_surface.get_width() + 10)  # Обновление ширины прямоугольника ввода
 
+def check_position_after_auto(start_time):
+    while pygame.time.get_ticks() - start_time < CHECK_TIME:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+        draw_game_screen()
+        pygame.display.flip()
+
+    if blue_rect.bottom != SCREEN_HEIGHT:
+        print_error_message()
+
+
+def print_error_message():
+    error_font = pygame.font.Font(None, 36)
+    error_text = error_font.render("Ошибка: квадрат не у нижнего края экрана!", True, RED)
+    error_rect = error_text.get_rect(center=(WINDOW_WIDTH // 2, SCREEN_HEIGHT // 2))
+    screen.blit(error_text, error_rect)
+    pygame.display.flip()
+    pygame.time.delay(2000)
+
+
 running = True  # Флаг работы игрового цикла
 clock = pygame.time.Clock()  # Объект для ограничения частоты кадров
 
@@ -121,9 +158,9 @@ while running:
             elif event.key == pygame.K_RETURN:  # Нажата клавиша ввода
                 if input_active:
                     try:
-                        auto_mode_cycles = int(input_text) * 2  # Обновление количества циклов
+                        auto_mode_cycles = int(input_text)  # Обновление количества циклов
                     except ValueError:
-                        auto_mode_cycles = 1 * 2  # Значение по умолчанию в случае ошибки преобразования
+                        auto_mode_cycles = 1  # Значение по умолчанию в случае ошибки преобразования
             elif input_active:
                 if event.key == pygame.K_BACKSPACE:  # Нажата клавиша Backspace
                     input_text = input_text[:-1]  # Удаление последнего символа в тексте
